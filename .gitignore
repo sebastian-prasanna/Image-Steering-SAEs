@@ -1,0 +1,7 @@
+# PyTorch model weights
+*.pt
+
+# libraries to load stylegan
+dnnlib/
+torch_utils/
+legacy.py

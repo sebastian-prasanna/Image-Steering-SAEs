@@ -3,12 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class SparseAutoencoder(nn.Module):
-    def __init__(self, latent_dim, hidden_dim, sparsity_lambda=1e-2):
+    def __init__(self, latent_dim, hidden_dim, sparsity_lambda=1e-3, device = 'mps'):
         super().__init__()
         self.encoder = nn.Linear(latent_dim, hidden_dim, bias=False)
+        self.relu = torch.nn.ReLU()
         self.latent_dim = latent_dim
         self.hidden_dim = hidden_dim
         self.sparsity_lambda = sparsity_lambda
+        self.device = device
 
     def decode(self, z):
         # decoder with tied weights
@@ -16,20 +18,21 @@ class SparseAutoencoder(nn.Module):
 
     def forward(self, x):
         z = self.encoder(x)
+        z = self.relu(z)
         x_hat = self.decode(z)
         return x_hat, z
 
     def loss(self, x, x_hat, z):
         recon_loss = F.mse_loss(x_hat, x)
-        sparsity_loss = self.sparsity_lambda * z.abs().mean()
-        return recon_loss + sparsity_loss, recon_loss, sparsity_loss
+        sparsity_loss = z.abs().mean()
+        return recon_loss + self.sparsity_lambda * sparsity_loss, recon_loss, sparsity_loss
 
     # periodically do this in training loop
-    def resample_dead_features(self, data_batch, z_batch, activation_threshold=1e-2):
+    def resample_dead_features(self, data_batch, z_batch, activation_threshold=1e-3):
         """
         Resample dead features in the encoder weight matrix.
         
-        data_batch: [B, latent_dim] — input latent vectors from the VAE
+        data_batch: [B, latent_dim] — input latent vectors
         z_batch: [B, hidden_dim] — encoded outputs
         """
         # Mean absolute activation per neuron
