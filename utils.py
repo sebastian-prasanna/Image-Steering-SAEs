@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import torch
 import einops
+import numpy as np
 
 def display_img(img, h, w):
     ''' 
@@ -14,12 +15,28 @@ def display_img(img, h, w):
         plt.show()
         return None
     fig, ax = plt.subplots(h, w, figsize=(10, 10))
-    for i in range(h):
-        for j in range(w):
-            to_show = reshaped[h * i + j]
-            ax[i, j].imshow(to_show)
-            ax[i, j].axis('off')
+    # Ensure ax is always 2D for consistent indexing
+    if h == 1:
+        ax = np.expand_dims(ax, axis=0)
+    if w == 1:
+        ax = np.expand_dims(ax, axis=1)
+    for row in range(h):
+        for col in range(w):
+            to_show = reshaped[w * row + col]
+            ax[row, col].imshow(to_show)
+            ax[row, col].axis('off')
 
 def process(imgs):
     # Maps pixel values from [-1, 1] to [0, 1]
     return torch.clamp((imgs + 1) * 0.5, 0, 1)
+
+@torch.inference_mode()
+def sample(GAN, latents):
+    ''' 
+    Samples from the GAN given latents of shape (Batch_size, 512)
+    Processes the images to the range [0, 1] for displaying
+    '''
+    c = None
+    images = GAN.synthesis(latents, c)
+    images = process(images)
+    return images

@@ -28,32 +28,36 @@ class SparseAutoencoder(nn.Module):
         return recon_loss + self.sparsity_lambda * sparsity_loss, recon_loss, sparsity_loss
 
     # periodically do this in training loop
-    def resample_dead_features(self, data_batch, z_batch, activation_threshold=1e-3):
+    def resample_dead_features(self, data_batch, z_batch, activation_threshold=1e-4):
         """
         Resample dead features in the encoder weight matrix.
-        
-        data_batch: [B, latent_dim] — input latent vectors
-        z_batch: [B, hidden_dim] — encoded outputs
+
+        data_batch: [B1, B2, latent_dim] — input latent vectors
+        z_batch:    [B1, B2, hidden_dim] — encoded outputs
         """
+        # Flatten batch dimensions: shape → [B1 * B2, latent_dim or hidden_dim]
+        flat_data = data_batch.view(-1, data_batch.size(-1))       # shape: [B, latent_dim]
+        flat_z = z_batch.view(-1, z_batch.size(-1))                 # shape: [B, hidden_dim]
+
         # Mean absolute activation per neuron
-        mean_activation = z_batch.abs().mean(dim=0)  # shape: [hidden_dim]
+        mean_activation = flat_z.abs().mean(dim=0)  # shape: [hidden_dim]
 
         # Indices of features that are mostly inactive
         dead_features = (mean_activation < activation_threshold).nonzero(as_tuple=True)[0]
 
         if len(dead_features) == 0:
             print('None Resampled!')
-            return None # Nothing to resample
+            return None
 
         # Sample random data points from the batch
         num_dead = len(dead_features)
         print(f'{num_dead} resampled!')
-        rand_indices = torch.randint(0, data_batch.size(0), (num_dead,))
-        sampled_inputs = data_batch[rand_indices]  # shape: [num_dead, latent_dim]
+        rand_indices = torch.randint(0, flat_data.size(0), (num_dead,))
+        sampled_inputs = flat_data[rand_indices]  # shape: [num_dead, latent_dim]
 
-        # Normalize to unit norm (optional, but good for stability)
-        sampled_inputs = F.normalize(sampled_inputs, p=2, dim=1)
+        # Normalize to unit norm
+        sampled_inputs = F.normalize(sampled_inputs, p=2, dim=-1)
 
-        # Replace corresponding rows in encoder weight matrix
+        # Replace encoder weights
         with torch.no_grad():
             self.encoder.weight[dead_features] = sampled_inputs
