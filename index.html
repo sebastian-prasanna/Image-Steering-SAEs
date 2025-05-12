@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Blog Post Title</title>
+  <style>
+    body {
+      font-family: "Georgia", serif;
+      line-height: 1.7;
+      margin: 0;
+      padding: 0;
+      background: #fdfdfd;
+      color: #333;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    header .meta {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    h2, h3, h4 {
+      font-weight: 500;
+      margin-top: 2rem;
+    }
+
+    p {
+      margin: 1.25rem 0;
+      font-size: 1.1rem;
+    }
+
+    blockquote {
+      border-left: 4px solid #ccc;
+      margin: 1.5rem 0;
+      padding-left: 1rem;
+      color: #555;
+      font-style: italic;
+    }
+
+    code {
+      background: #f0f0f0;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    pre {
+      background: #f4f4f4;
+      padding: 1rem;
+      overflow-x: auto;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      font-size: 0.95rem;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 2rem auto;
+    }
+
+    footer {
+      margin-top: 4rem;
+      font-size: 0.9rem;
+      color: #888;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      header h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Steering Image Models by Identifying Interpretable Steering Vectors With Sparse Autoencoders</h1>
+      <div class="meta">By Justin Zhang and Sebastian Prasanna - May 13, 2025</div>
+    </header>
+
+    <p>
+        Generative models like VAEs, GANs and diffusion models have shown an extraordinary capacity to generate realistic 
+        and diverse images. However, the latent and activation spaces in these models are not well understood. Prior work 
+        has shown that certain directions in latent space correspond to semantic changes (e.g., smiling, aging, lighting). 
+        However, this remains a trial-and-error process, and all state of the art methods require labeling large amounts of
+        data.
+    </p>
+    <p>
+        There have been a multitude of advances in the area of activation steering, and numerous such examples have occurred
+        in the area of Transformer-based language models. For example, Turner et al finds that by finding a phrase that capture
+        a concept, and a phrase that captures the opposite (e.x. "Love" and "Hate"), one can add in the activations for the 
+        first phrase and subtract the activations for the second phrase at a certain layer in an LLM on the forward pass of the
+        model, "steering" the generation of text [1]. This is known as the method of "contrastive pairs".
+    </p>
+    <img src="blog_post_media/turner_experiment.png" alt="Turner et al steering GPT-2 using contrastive pairs" />
+    <p>
+        We would like to study whether these techniques are also applicable to image models and not just transformer based text
+        models. Since the method of contrastive pairs (used in Turner et al on LLMs) is not as applicable to images (it’s hard 
+        to find very similar images where there is only one relevant difference), we will train a Sparse Autoencoder on 
+        intermediate latent representations to decompose them into interpretable directions in latent space. After interpreting 
+        these directions, we will experiment with activation steering to augment the image generation process.
+        Our work is novel and builds on past work because: 
+        <ul>
+            <li>It utilizes SAEs instead of contrastive pairs/labeling images. This allows us to capture concepts that aren't explicitly labeled.</li>
+            <li>We will experiment across different models types like VAEs and GANs</li>
+        </ul>
+        We predict that intermediate latent spaces will have directions corresponding to highly interpretable features. Given 
+        success with activation steering in transformer language models, we believe that identifying and adding in these directions 
+        will give us unprecedented control over the image generation process for image generation models.    
+    </p>
+
+    <h2>Literature Review</h2>
+    <p>
+        Recent advancements in generative models have significantly improved the realism and diversity of synthesized images. 
+        However, understanding and controlling the latent and activation spaces of these models remain challenging. Researchers 
+        have been exploring various techniques to interpret and manipulate these spaces to achieve more controllable and 
+        interpretable image generation.
+    </p>
+    <p>
+        Shen et al. (2020) proposed a method for interpreting the latent space of GANs by analyzing the correlation between 
+        latent variables and the corresponding semantic contents in generated images. Specifically, they train Residual Network
+        on the CelebA dataset to identify certain atributes in images (like smiling, or pose), and then find the hyperplane
+        in the GAN's latent space that best separates certain atributes. For example, if the atribute of choice was smiling, 
+        they would find the hyperplane that best separates latents that produce smiling images from latents that don't produce 
+        smiling images. The steering vector for smiling is thus the vector normal to this hyperplane.
+        By intervening in the latent variables of a pre-trained GAN model, they demonstrated that certain dimensions in the 
+        latent space are responsible for specific semantic features, enabling controllable concept manipulation in generated images. 
+    </p>
+
+    <p>
+        Cheng et al. (2022) explored the use of Variational Autoencoders (VAEs), specifically Beta-VAE and DFC-VAE, for facial 
+        expression synthesis. By performing latent space arithmetic, they demonstrated the ability to manipulate specific facial 
+        attributes, such as widening a smile or narrowing eyes, by adjusting the latent representations. This work underscores the 
+        effectiveness of VAEs in learning disentangled representations for controllable image synthesis. To find steering vectors,
+        they use the contrastive pairs method, encoding many images, splitting them into images with an atribute, and images without
+        and then subtracting the average latent representations from those 2 classes to yield a steering vector.
+    </p>
+
+    <p>
+        We build on the literature by proposing a method that requires no labeled data to interpret latent vectors. By simply
+        visualizing images that have high activation on a certain neuron, and by steering images with the latent vector,
+        we can identify steering vectors without labeling images using a Residual Network or class labels. To demonstrate
+        the power of this method, we identify steering vectors in StyleGAN that encode concepts far more complicated than
+        those others in the literature have identified.
+    </p>
+
+    <h2>VAE Stuff</h2>
+    <p>
+      Here you can go into detail. Use <code>inline code</code> for snippets, or a full block for longer code examples:
+    </p>
+
+    <pre><code>def hello():
+    print("Hello, world!")</code></pre>
+
+    <h3>Subsection</h3>
+    <p>
+      Use subsections to break up ideas. Add figures with:
+    </p>
+
+    <img src="your-image.png" alt="Description of image" />
+
+    <blockquote>
+      Key insight or takeaway message goes here, like a pull quote or side note.
+    </blockquote>
+
+    <h2>Steering with StyleGAN</h2>
+    <p>
+      Here you can go into detail. Use <code>inline code</code> for snippets, or a full block for longer code examples:
+    </p>
+
+    <section id="references">
+        <h2>References</h2>
+        <ol>
+          <li>
+            Alexander Matt Turner, Lisa Thiergart, Gavin Leech.
+            <em>Steering Language Models With Activation Engineering</em>. Arxiv, 2024.
+            <a href="https://www.deeplearningbook.org/" target="_blank">[Link]</a>
+          </li>
+
+          <li>
+            Chris Olah, Shan Carter, and Ludwig Schubert. 
+            "The Building Blocks of Interpretability." 
+            <em>Distill</em>, 2018.
+            <a href="https://distill.pub/2018/building-blocks/" target="_blank">[Link]</a>
+          </li>
+
+          <li>
+            Diederik P. Kingma and Max Welling. 
+            "Auto-Encoding Variational Bayes." 
+            arXiv:1312.6114, 2013.
+            <a href="https://arxiv.org/abs/1312.6114" target="_blank">[arXiv]</a>
+          </li>
+        </ol>
+    </section>
+
+    <footer>
+      © 2025 Your Name — Built with ❤️
+    </footer>
+  </div>
+</body>
+</html>
