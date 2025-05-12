@@ -8,6 +8,7 @@ class Encoder(nn.Module):
     Convolutional encoder that maps an image to latent mean and log-variance vectors.
     We're going to be workign with 64 by 64 images
     """
+    
     def __init__(self, in_channels: int = 3, latent_dim: int = 128):
         super(Encoder, self).__init__()
         # Convolutional layers

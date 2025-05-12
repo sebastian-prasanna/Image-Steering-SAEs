@@ -120,7 +120,7 @@ def analyze_features(vae, sae, test_dataloader, num_samples=5):
         # Analyze each feature
         for feature_idx in range(min(10, sae.hidden_dim)):  # Look at first 10 features
             # Get the feature vector
-            feature_vector = sae.encoder.weight[feature_idx]
+            feature_vector = sae.encoder.weight[:,feature_idx]
             
             # Create variations by adding/subtracting the feature
             variations = []
