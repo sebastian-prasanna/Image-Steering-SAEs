@@ -25,6 +25,8 @@ def display_img(img, h, w):
             to_show = reshaped[w * row + col]
             ax[row, col].imshow(to_show)
             ax[row, col].axis('off')
+    plt.tight_layout()
+    plt.show()
 
 def process(imgs):
     # Maps pixel values from [-1, 1] to [0, 1]
@@ -36,7 +38,6 @@ def sample(GAN, latents):
     Samples from the GAN given latents of shape (Batch_size, 512)
     Processes the images to the range [0, 1] for displaying
     '''
-    c = None
-    images = GAN.synthesis(latents, c)
+    images = GAN.synthesis(latents)
     images = process(images)
     return images
