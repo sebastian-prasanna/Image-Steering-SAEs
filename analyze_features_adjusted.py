@@ -29,7 +29,7 @@ def get_dataloader():
     return dataloader
 
 def analyze_features(vae, sae, test_dataloader, num_samples=5):
-    """Analyze SAE features by manipulating them in the VAE latent space (adjusted version)"""
+    """Analyze the most active SAE features by manipulating them in the VAE latent space"""
     vae.eval()
     sae.eval()
     
@@ -40,25 +40,24 @@ def analyze_features(vae, sae, test_dataloader, num_samples=5):
     # Get VAE latents
     with torch.no_grad():
         mu, _ = vae.encoder(test_batch)
-        z = sae.encoder(mu)
+        z = sae.encoder(mu)  # shape: [batch, hidden_dim]
         
-        # Analyze each feature
-        for feature_idx in range(min(10, sae.hidden_dim)):  # Look at first 10 features
-            # Get the feature vector (adjusted: use correct dimension)
-            feature_vector = sae.encoder.weight[feature_idx]  # shape: [latent_dim]
-            
-            # Create variations by adding/subtracting the feature
+        # Compute mean activation for each feature
+        activations = z.abs().mean(dim=0)  # shape: [hidden_dim]
+        # Get indices of top 10 most active features
+        topk = torch.topk(activations, 10).indices.tolist()
+        
+        print("Top 10 most active features:", topk)
+        
+        for feature_idx in topk:
+            feature_vector = sae.encoder.weight[feature_idx]
             variations = []
             for scale in [-2.0, -1.0, 0.0, 1.0, 2.0]:
                 modified_mu = mu + scale * feature_vector
                 recon = vae.decoder(modified_mu)
                 variations.append(recon)
-            
-            # Save the variations
             variations = torch.cat(variations, dim=0)
-            save_image(variations, f'feature_{feature_idx}_variations_adjusted.png', nrow=num_samples)
-            
-            # Print feature activation statistics
+            save_image(variations, f'feature_{feature_idx}_variations_top_active.png', nrow=num_samples)
             activation = z[:, feature_idx].abs().mean().item()
             print(f"Feature {feature_idx} mean activation: {activation:.4f}")
 
