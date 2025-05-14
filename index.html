@@ -380,7 +380,12 @@
     <img src="blog_post_media/vae_source_target_2.png" alt="" />
 
     <p>
-      We have two images, namely, a source image, which occurs at $\alpha = 0.0$, and a target image, which occurs at $\alpha = 1.0$. We then encode both of these images into the SAE latent space, and perform a linear interpolation as a linear combination of source multiplied by a factor of $1-\alpha$ and the target multiplied by a factor of $\alpha$. We take this linear combination as $\alpha$ ranges from $0$ to $1$. Upon doing so, we then follow by decoding the latent object that is interpolated back into an image. This experimentation and visualization is significant as it shows that we can effectively make “combinations" of traits by linear combinations of images with our desired traits.
+      We have two images, namely, a source image, which occurs at alpha = 0.0, and a target image, which occurs at 
+      alpha = 1.0. We then encode both of these images into the SAE latent space, and perform a linear interpolation 
+      as a linear combination of source multiplied by a factor of 1-alpha and the target multiplied by a factor of alpha. 
+      We take this linear combination as alpha ranges from 0 to 1. Upon doing so, we then follow by decoding the latent 
+      object that is interpolated back into an image. This experimentation and visualization is significant as it shows that 
+      we can effectively make “combinations" of traits by linear combinations of images with our desired traits.
     </p>
     <img src="blog_post_media/vae_interpolation.png" alt="" />
 
