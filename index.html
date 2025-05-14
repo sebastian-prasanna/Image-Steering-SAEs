@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Your Blog Post Title</title>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script type="text/javascript"
+    id="MathJax-script" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
   <style>
     body {
       font-family: "Georgia", serif;
@@ -127,6 +134,8 @@
             <li>It utilizes SAEs instead of contrastive pairs/labeling images. This allows us to capture concepts that aren't explicitly labeled.</li>
             <li>We will experiment across different models types like VAEs and GANs</li>
         </ul>
+    </p>
+    <p>
         We predict that intermediate latent spaces will have directions corresponding to highly interpretable features. Given 
         success with activation steering in transformer language models, we believe that identifying and adding in these directions 
         will give us unprecedented control over the image generation process for image generation models.    
@@ -141,11 +150,11 @@
     </p>
     <p>
         Shen et al. (2020) proposed a method for interpreting the latent space of GANs by analyzing the correlation between 
-        latent variables and the corresponding semantic contents in generated images. Specifically, they train Residual Network
+        latent variables and the corresponding semantic contents in generated images. Specifically, they train a Residual Network
         on the CelebA dataset to identify certain atributes in images (like smiling, or pose), and then find the hyperplane
         in the GAN's latent space that best separates certain atributes. For example, if the atribute of choice was smiling, 
         they would find the hyperplane that best separates latents that produce smiling images from latents that don't produce 
-        smiling images. The steering vector for smiling is thus the vector normal to this hyperplane.
+        smiling images. The steering vector for smiling is thus the unit vector normal to this hyperplane.
         By intervening in the latent variables of a pre-trained GAN model, they demonstrated that certain dimensions in the 
         latent space are responsible for specific semantic features, enabling controllable concept manipulation in generated images. 
     </p>
@@ -163,9 +172,82 @@
         We build on the literature by proposing a method that requires no labeled data to interpret latent vectors. By simply
         visualizing images that have high activation on a certain neuron, and by steering images with the latent vector,
         we can identify steering vectors without labeling images using a Residual Network or class labels. To demonstrate
-        the power of this method, we identify steering vectors in StyleGAN that encode concepts far more complicated than
-        those others in the literature have identified.
+        the power of this method, we identify steering vectors in a VAE we train on the CelebA dataset, and on the pretrained model
+        StyleGAN. We find that our method encodes concepts far more complicated than those previously identified in the literature.
     </p>
+
+    <h2>A Quick Explanation of Sparse Autoencoders (SAEs)</h2>
+
+    <p>
+      Autoencoders are neural networks trained to reconstruct their input by encoding it into a lower-dimensional space and 
+      then decoding it back. They learn a compressed representation of data by forcing information through a bottleneck layer. 
+      While effective at capturing structure, standard autoencoders tend to learn dense and entangled representations—where each 
+      latent unit often mixes many unrelated features.
+    </p>
+
+    <p>
+      Sparse Autoencoders (SAEs) introduce a critical improvement: they constrain the latent representation to be sparse. 
+      This means that, for any given input, only a small number of neurons in the hidden layer are allowed to activate. The goal is 
+      to encourage the model to find a disentangled basis: a set of features where each dimension captures a distinct and 
+      semantically meaningful aspect of the data. Note that we use tied-weights SAEs for our experiments: the decoding matrix
+      is the transpose of the encoding  matrix.
+    </p>
+
+    <p>
+      \[x̂ = W^{T}(ReLU(Wx))\]
+    </p>
+
+    <p>
+      To encourage sparsity, SAEs add a penalty to the loss function. A typical formulation might include an L1 regularization 
+      term on the latent vector (this is what we use):
+    </p>
+
+    <p>
+      \[L = \|x - x̂\|^2 + λ \cdot \|z\|_1\]
+    </p>
+
+    <p>
+      Here, <code>x</code> is the input, <code>x̂</code> is the reconstruction, <code>z</code> is the latent encoding, 
+      and <code>λ</code> controls the strength of the sparsity penalty (we use <code>λ = 0.5</code>). 
+      The L1 norm <code>||z||₁</code> encourages many entries in <code>z</code> to be zero. Only a few neurons fire for 
+      any given example, forcing the autoencoder to learn a distributed set of specialized features.
+    </p>
+
+    <p>
+      Sparsity leads to disentanglement for two key reasons. First, since only a small number of neurons can be active, 
+      each must learn to represent a distinct, high-utility feature to justify its activation. Secondly, sparse activations reduce 
+      interference between features. This makes it easier for each neuron to align with a specific, interpretable concept (
+        e.g., “glasses”, “smile”, or “shadow”).
+    </p>
+
+
+    <h2>Activation Steering</h2>
+
+    <p>
+      Activation steering is a technique used to modify the internal activations of a neural network to induce specific 
+      behaviors or attributes. Given a steering vector <code>v</code>—typically derived from the difference between two 
+      activation patterns—and an injection coefficient <code>c</code>, the activation <code>a</code> at a particular layer 
+      can be modified as <code>a' = a + c · v</code>. This allows fine-grained control over model outputs, such as inducing 
+      features like "smiling" in image generation models by pushing in the direction of concept-aligned vectors.
+    </p>
+
+    <h2>Why SAEs are Relevant to Steering</h2>
+    <p>
+      A trained <strong>Sparse Autoencoder (SAE)</strong> learns a weight matrix <code>W</code> in its encoder that maps 
+      input activations to sparse latent features. Suppose the SAE maps from a 512-dimensional latent space to a 
+      1024-dimensional sparse representation space, and then back to the 512-dimensional space. Then the W is a 1024 x 512
+      matrix. Each row of <code>W</code> corresponds to a distinct feature direction in the original activation space.
+      This is because the SAE maps from a sparse representation <code>[a₀, a₁, a₂, …]</code> to 
+    </p>
+    <p>
+      \[\sum_{i=0}^{1024} a_i \cdot v_i\]
+    </p>
+    <p>
+      Where v_i are the row vectors of the weight matrix. Note that to decode the sparse representation, we multiply by
+      the transpose of the weight matrix (so columns of the transpose are rows of the original). Thus the relevant
+      steering vectors are the 512-dimensional rows of the weight matrix.
+    </p>
+
 
     <h2>VAE Stuff</h2>
     <p>
@@ -187,8 +269,192 @@
     </blockquote>
 
     <h2>Steering with StyleGAN</h2>
+
+    <h3><strong>What is StyleGAN?</strong></h3>
     <p>
-      Here you can go into detail. Use <code>inline code</code> for snippets, or a full block for longer code examples:
+      StyleGAN (Style-based Generative Adversarial Network), introduced by Karras et al. in 2019, marked a significant leap in image synthesis quality.
+      Unlike traditional GAN architectures that feed a latent vector directly into a generator, StyleGAN uses a style-based architecture that introduces 
+      new latent spaces and transformations to give greater control over image attributes. One of the central innovations in StyleGAN is the introduction 
+      of an intermediate latent space called W space, which fundamentally changes how images are generated and manipulated.
+    </p>
+  
+    <p>
+      In a standard GAN, a latent vector <code>z ∼ 𝒩(0, I)</code> is passed directly into the generator <code>G(z)</code>. In 
+      StyleGAN, however, this process is decoupled. First, <code>z</code> is mapped through a learned mapping Network
+      <code>f</code> to produce a new latent vector:
+    </p>
+  
+    <pre><code>w = f(z)</code></pre>
+  
+    <p>
+      This vector <code>w ∈ 𝒲</code> lies in a space that is typically more disentangled than the original <code>𝒵</code> space.
+      While <code>𝒵</code> is Gaussian and highly entangled, the mapping function <code>f</code> "warps" this space into a more 
+      semantically meaningful structure. Notably, this latent space should linearly represent concepts, which means activation
+      steering should be effective!
+    </p>
+  
+    <p>
+      The generated vector <code>w</code> doesn't feed directly into a convolutional generator. Instead, StyleGAN uses <strong>adaptive instance normalization (AdaIN)</strong> to control the activations at each layer of the synthesis network.
+      Each layer of the synthesis network receives styles derived from <code>w</code>, allowing features such as pose, lighting, and texture to be adjusted independently.
+      Formally, if <code>x<sub>l</sub></code> is the activation at layer <code>l</code>, the AdaIN operation can be written as:
+    </p>
+  
+    <pre><code>
+  AdaIN(xₗ, w) = σ(wₗ) · (xₗ - μ(xₗ)) / σ(xₗ) + μ(wₗ)
+    </code></pre>
+  
+    <p>
+      where <code>μ(·)</code> and <code>σ(·)</code> denote the mean and standard deviation, and <code>wₗ</code> refers to the layer-specific transformation of <code>w</code>.
+    </p>
+
+    <p>
+      For these experiments, we have <code>wₗ = w</code> for all layers <code>l</code>. In future experiments, we could train
+      an SAE on all 14 latent spaces (the <code>𝒲⁺</code> space), but for this post, we only train on the original <code>W</code> space.
+    </p>
+
+    <h3><strong>Steering Results with StyleGAN</strong></h3>
+
+    <p>
+      We train an SAE on the W space of StyleGAN2, mapping the 512 dimensional W space to an 1024-dimensional sparse representation
+      space. We ran multiple training runs, and surprisingly found the SAE that balanced reconstruction loss and sparsity the best 
+      was trained for only 10 epochs on a dataset of 640,000 latents vectors generated by StyleGAN2's mapping network. We experimented
+      with resampling dead latents that didn't fire often (specifically, they're average activation was less than 0.0001), but this 
+      counterintuitively significantly decreased reconstruction loss, though it slightly improved sparsity. Ultimately, the SAE
+      trained on 10 epochs without resampling showed more interpretable latent vectors than the SAE's trained for 30 and 35 epochs 
+      with resampling. Here are the losses on the validation set during training.
+    </p>
+    <img src="blog_post_media/gan_sae_training.png" alt="" />
+
+    <p>
+      The sparsity loss during training is also interesting. It seems the model sacrifices sparsity at the beginning to achieve 
+      good reconstruction loss, then brings the sparsity down.
+    </p>
+    <img src="blog_post_media/gan_sae_training_sparsity.png" alt="" />
+
+    <p>
+      Because the SAE disentangles the <code>W</code> space in an unsupervised way, we don't require class labels for this method,
+      which significantly increases the range of possible concepts we can identify in latent vectors. Past research has identified
+      steering vectors for simple concepts like smiling, pose and gender. Because our method doesn't require class labels, we find
+      steering vectors for far more abstract concepts. By only examining the first 20 latent vectors (sorted by average activation),
+      we identify steering vectors for:
+    </p>
+
+    <ol>
+      <li>
+        Gender
+      </li>
+      <li>
+        Pose
+      </li>
+      <li>
+        Hats
+      </li>
+      <li>
+        Bangs
+      </li>
+      <li>
+        Sunglasses
+      </li>
+      <li>
+        Hair Swooping Left
+      </li>
+      <li>
+        Hair Swooping Right
+      </li>
+      <li>
+        Hair Darkening
+      </li>
+      <li>
+        Hair Lightening
+      </li>
+      <li>
+        Background Darkening
+      </li>
+      <li>
+        Background Lightening
+      </li>
+      <li>
+        Voluminous Black Hair
+      </li>
+      <li>
+        Chin Tucked
+      </li>
+    </ol>
+
+    <p>
+      Notably, the vector for "smiling" doesn't seem to appear in the top 20 (but it does in the top 30)!
+      Unfortunately, the features aren't perfectly disentangled by the SAE, but most steering vectors yield one clear atribute,
+      and might be entangled slightly with another atribute. For example, some of the pose steering vectors also tend to change
+      the gender of the image. In the top 20 steering vectors (by average activation), there are only 3 that we don't find concise
+      natural language descriptions for. This may also be because we didn't notice the concept that the vector represents.
+      Additionally, there are multiple steering vectors that seem to represent similar concepts. We find 3 vectors that encode 
+      gender in the top 20.
+    </p>
+    <p>
+      Since there are far too many steering vectors to demo, we choose a few interesting ones that don't seem to have been
+      identified by previous works. We start with the "average image", and then inject the steering vector before we synthesize
+      the image using StyleGAN2. The injection coefficients from left to right go from -2 to 10, equally spaced along the way. 
+      That is, the left image results from taking the average SAE activations, subtracting 2 from the relevant neuron, then 
+      decoding into the 512-dimensional latent space, and then generating the image using StyleGAN. This is what the "average
+      image" looks like. We find it by averaging all sparse activations over the test dataset, and then decoding it and running
+      it through StyleGAN.
+    </p>
+    <img src="blog_post_media/gan_avg_activations.png" alt="" />
+
+    <p>
+      Hats:
+    </p>
+    <img src="blog_post_media/gan_hats.png" alt="" />
+
+    <p>
+      Hair Swooping Left:
+    </p>
+    <img src="blog_post_media/gan_hair_swoops_left.png" alt="" />
+
+    <p>
+      Voluminous Black Hair:
+    </p>
+    <img src="blog_post_media/gan_voluminous_black_hair.png" alt="" />
+
+    <p>
+      We can also test steering vectors on random images! Here are 7x7 grids of random images, being steered. The injection
+      coefficients go from 0 to 6, with 7 steps (so the image on the far left is the original image).
+    </p>
+
+    <p>
+      Hair lightening:
+    </p>
+    <img src="blog_post_media/gan_hair_lightening.png" alt="" />
+
+    <p>
+      Chin tucked:
+    </p>
+    <img src="blog_post_media/gan_chin_tucked.png" alt="" />
+
+    <p>
+      Some of the images aren't perfect, but most of them look pretty good! We can also combine multiple features by steering
+      in multiple directions.
+      We'll start with the average activations, and then add in a bunch of features. Let's try turning our "average activations" 
+      woman light-haired (steering vector #5) and gaunt (#859), and give her bangs (#1002 and # 833) and a dark background (#581).
+    </p>
+    <img src="blog_post_media/gan_multiple_injections.png" alt="" />
+
+    <p>
+      Or a man (#298) with curly dark hair (#888), face turned right (#424) and smiling (#195)
+    </p>
+    <img src="blog_post_media/gan_multiple_injections2.png" alt="" />
+
+    <p>
+      Both of these images were steering from the same original image!
+    </p>
+
+    <h2>Conclusion</h2>
+    <p>
+      In conclusion, we find that SAEs are a powerful tool for disentangling interpretable concepts in the latent spaces
+      of image generative models. Additionally, we find that the latent vectors identified by SAEs act as effective steering 
+      vectors. We were able to inject these vectors into the forward pass of generative image models to generate new images
+      that follow the user's design. Ultimately, our experiments showcase the effectiveness of applying interpretability methods
+      to understanding and augmenting image generative models.
     </p>
 
     <section id="references">
@@ -197,7 +463,7 @@
           <li>
             Alexander Matt Turner, Lisa Thiergart, Gavin Leech.
             <em>Steering Language Models With Activation Engineering</em>. Arxiv, 2024.
-            <a href="https://www.deeplearningbook.org/" target="_blank">[Link]</a>
+            <a href="https://arxiv.org/abs/2308.10248" target="_blank">[Link]</a>
           </li>
 
           <li>
