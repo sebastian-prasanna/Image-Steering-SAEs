@@ -6,8 +6,8 @@ from torchvision.utils import save_image
 import os
 from tqdm import tqdm
 import numpy as np
-from vae_stuff.VAE import VAE
-from SAE import SparseAutoencoder
+from VAE import VAE
+from GAN_steering.SAE import SparseAutoencoder
 import matplotlib.pyplot as plt
 
 # Constants

@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 import numpy as np
-from vae_stuff.VAE import VAE
+from VAE import VAE
 from SAE import SparseAutoencoder
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms

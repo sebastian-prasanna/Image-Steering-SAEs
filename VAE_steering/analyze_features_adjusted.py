@@ -2,7 +2,7 @@ import torch
 from torchvision.utils import save_image
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from vae_stuff.VAE import VAE
+from VAE import VAE
 from SAE import SparseAutoencoder
 import os
 
